@@ -87,6 +87,32 @@ stack_error_t StackDtor(stack_type* stack) {
 
 //----------------------------------------------------------------------------------
 
+stack_error_t PrintStack(stack_type* stack) {
+    STACK_VERIFY(stack, "error");
+
+    for (size_t pos = 0; pos < stack->capacity; pos++) {
+        if (pos < stack->last_elem_ptr) {
+            PrintColor(BASE, "\t* ");
+            printf("[%zu] = ", pos);
+            PRINT_STACK_ELEM(GREEN, stack->data[pos]);
+        } else
+        if (pos == stack->last_elem_ptr) {
+            PrintColor(BASE, "\t> ");
+            printf("[%zu] = ", pos);
+            PRINT_STACK_ELEM(YELLOW, stack->data[pos]);
+        } else {
+            PrintColor(BASE, "\tp ");
+            printf("[%zu] = ", pos);
+            PRINT_STACK_ELEM(RED, stack->data[pos]);
+        }
+    }
+
+    printf("\n");
+    return stack_error_t::NORMAL;
+}
+
+//----------------------------------------------------------------------------------
+
 static stack_error_t StackError(stack_type* stack) {
     if (stack == nullptr) {
         return stack_error_t::NULLPTR;
@@ -97,7 +123,7 @@ static stack_error_t StackError(stack_type* stack) {
     if (*(stack->data - 1) != CANARY || stack->data[stack->capacity] != CANARY) {
         return stack_error_t::CANARYERR;
     }
-    if (stack->last_elem_ptr >= stack->capacity) {
+    if (stack->last_elem_ptr > stack->capacity) {
         return stack_error_t::OVERSIZE;
     }
 
@@ -185,7 +211,7 @@ static stack_error_t StackUpCapacity(stack_type* stack) {
 
     stack->data[stack->capacity] = POISON;
     stack->capacity *= 2;
-    stack->data = (stack_elem_t*)realloc(stack->data, (stack->capacity + 2) * sizeof(stack_elem_t));
+    *(&stack->data - 1) = (stack_elem_t*)realloc(stack->data - 1, (stack->capacity + 2) * sizeof(stack_elem_t));
     stack->data[stack->capacity] = CANARY;
 
     STACK_VERIFY(stack, "error");
