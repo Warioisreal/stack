@@ -7,7 +7,6 @@
 const size_t HASH_SEED = 5381;
 
 typedef enum class Errors : char {
-
     OK                    = 0,
     NULL_POINTER          = 1,    // stack == NULL_POINTER
     STRUCT_CANARY_CORRUPT = 2,    // struct canary error
@@ -21,17 +20,24 @@ typedef enum class Errors : char {
     REALLOC_FAILED        = 10    // realloc failure
 } stack_error_t;
 
+typedef struct VerifyCallData {
+    const char* file_name = nullptr;
+    int line_number       = 0;
+    const char* func_name = nullptr;
+} call_data_t;
+
 #define STACK_VERIFY(st, str) BEGIN { \
-                                    stack_error_t err = CheckStackIntegrity(st); \
-                                    if (err != stack_error_t::OK) { \
-                                        StackDump(st, err, str); \
-                                        return CheckStackIntegrity(st); \
-                                    } \
-                                 } END
+                                        call_data_t call_info = {__FILE__, __LINE__, __PRETTY_FUNCTION__}; \
+                                        stack_error_t err = CheckStackIntegrity(st); \
+                                        if (err != stack_error_t::OK) { \
+                                            StackDump(st, err, &call_info, str); \
+                                            return CheckStackIntegrity(st); \
+                                        } \
+                                    } END
 
 
 stack_error_t CheckStackIntegrity(stack_type* stack);
-void StackDump(stack_type* stack, stack_error_t error, const char* str);
+void StackDump(stack_type* stack, stack_error_t error, call_data_t* call_info, const char* message);
 size_t CalculateStructHash(stack_type* stack);
 size_t CalculateDataHash(stack_type* stack);
 

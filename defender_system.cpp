@@ -42,8 +42,16 @@ stack_error_t CheckStackIntegrity(stack_type* stack) {
 
 //----------------------------------------------------------------------------------
 
-void StackDump(stack_type* stack, stack_error_t error, const char* message) {
+void StackDump(stack_type* stack, stack_error_t error, call_data_t* call_info, const char* message) {
     if (message != nullptr) { PrintColorVar(RED, "%s\n", message); }
+
+    printf("\nerror_in_file: ");
+    PrintColorVar(YELLOW, "%s", call_info->file_name);
+    printf("  line: ");
+    PrintColorVar(YELLOW, "%d", call_info->line_number);
+    printf("  function: ");
+    PrintColorVar(YELLOW, "%s", call_info->func_name);
+    printf("\n\n");
 
     printf("stack(");
     if (error == stack_error_t::NULL_POINTER) {
@@ -59,7 +67,7 @@ void StackDump(stack_type* stack, stack_error_t error, const char* message) {
         PrintColorVar(YELLOW, "%s", stack->stack_info.file_name);
         printf("  line: ");
         PrintColorVar(YELLOW, "%d", stack->stack_info.line_number);
-        printf("  create_in_function: ");
+        printf("  function: ");
         PrintColorVar(YELLOW, "%s", stack->stack_info.func_name);
         printf("\n");
     }

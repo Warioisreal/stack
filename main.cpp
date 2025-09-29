@@ -13,17 +13,18 @@
 #define CREATE_STACK(name) stack_type name = {INIT(name)}
 
 
-int main(void) {
+int main(const int argc, const char* argv[]) {
+
     stack_elem_t value = POISON;
     CREATE_STACK(st1);
-    StackCtor(&st1, 5);
-    PrintStack(&st1);
-    StackPush(&st1, 10);
-    PrintStack(&st1);
-    StackPop(&st1, &value);
+    CHECK_ERROR(StackCtor(&st1, 5));
+    CHECK_ERROR(PrintStack(&st1));
+    CHECK_ERROR(StackPush(&st1, 10));
+    CHECK_ERROR(PrintStack(&st1));
+    CHECK_ERROR(StackPop(&st1, &value));
     PRINT_STACK_ELEMENT(BASE, value);
-    PrintStack(&st1);
-    StackDtor(&st1);
+    CHECK_ERROR(PrintStack(&st1));
+    CHECK_ERROR(StackDtor(&st1));
 
     return 0;
 }

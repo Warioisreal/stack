@@ -64,7 +64,8 @@ stack_error_t StackPop(stack_type* stack, stack_elem_t* value) {
         stack->data_hash   = CalculateDataHash(stack);
         stack->struct_hash = CalculateStructHash(stack);
     } else {
-        StackDump(stack, stack_error_t::POP_EMPTY_STACK, "pop from empty stack");
+        call_data_t call_info = {__FILE__, __LINE__, __PRETTY_FUNCTION__};
+        StackDump(stack, stack_error_t::POP_EMPTY_STACK, &call_info, "pop from empty stack");
         return stack_error_t::POP_EMPTY_STACK;
     }
 
@@ -128,7 +129,8 @@ static stack_error_t StackUpCapacity(stack_type* stack) {
     stack_elem_t* new_data = (stack_elem_t*)realloc(stack->data - 1, (stack->capacity + 2) * sizeof(stack_elem_t));
 
     if (new_data == nullptr) {
-        StackDump(stack, stack_error_t::REALLOC_FAILED, "realloc failed");
+        call_data_t call_info = {__FILE__, __LINE__, __PRETTY_FUNCTION__};
+        StackDump(stack, stack_error_t::REALLOC_FAILED, &call_info, "realloc failed");
         return stack_error_t::REALLOC_FAILED;
     }
 
