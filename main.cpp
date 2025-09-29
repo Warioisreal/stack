@@ -1,55 +1,29 @@
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "color_lib.h"
+#include "stack_lib.h"
 
 #include "stack_func.h"
 
-#define CHECK_ERROR(error) if (error != stack_error_t::NORMAL) { return 1; }
+#define CHECK_ERROR(error) if (error != stack_error_t::OK) { return 1; }
 
-#define INIT(name) .stack_init_data = {__FILE__, __LINE__, __PRETTY_FUNCTION__, #name}
+#define INIT(name) .stack_info = {__FILE__, __LINE__, __PRETTY_FUNCTION__, #name}
 
-#define MAKE_STACK(name) stack_type name = {INIT(name)}
+#define CREATE_STACK(name) stack_type name = {INIT(name)}
 
 
 int main(void) {
-
-    bool DEBUG = true;
-
-    MAKE_STACK(st1);
-
     stack_elem_t value = POISON;
-
-    CHECK_ERROR(StackCtor(&st1, 5));
-
+    CREATE_STACK(st1);
+    StackCtor(&st1, 5);
     PrintStack(&st1);
-
-    CHECK_ERROR(StackPush(&st1, 10));
-
+    StackPush(&st1, 10);
     PrintStack(&st1);
-
-    CHECK_ERROR(StackPush(&st1, 20));
-
+    StackPop(&st1, &value);
+    PRINT_STACK_ELEMENT(BASE, value);
     PrintStack(&st1);
-
-    CHECK_ERROR(StackPush(&st1, 30));
-
-    PrintStack(&st1);
-
-    CHECK_ERROR(StackPush(&st1, 40));
-
-    PrintStack(&st1);
-
-    CHECK_ERROR(StackPush(&st1, 50));
-
-    PrintStack(&st1);
-
-    CHECK_ERROR(StackPop(&st1, &value));
-
-    PrintStack(&st1);
-
-    PRINT_STACK_ELEM(BASE, value);
-
-    CHECK_ERROR(StackDtor(&st1));
+    StackDtor(&st1);
 
     return 0;
 }
