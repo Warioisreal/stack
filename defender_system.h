@@ -16,7 +16,7 @@ typedef enum class Errors : char {
     HASH_MISMATCH         = 6,    // hash mismatch
     DATA_CANARY_CORRUPT   = 7,    // data canary error
     POP_EMPTY_STACK       = 8,    // pop from empty stack
-    SIZE_CAPACITY_INCONSISTENT = 9,    // size/capacity inconsistency
+    CALLOC_FAILED         = 9,    // calloc failure
     REALLOC_FAILED        = 10    // realloc failure
 } stack_error_t;
 
@@ -26,8 +26,10 @@ typedef struct VerifyCallData {
     const char* func_name = nullptr;
 } call_data_t;
 
+#define GET_INFO(name) call_data_t name = {__FILE__, __LINE__, __PRETTY_FUNCTION__}
+
 #define STACK_VERIFY(st, str) BEGIN { \
-                                        call_data_t call_info = {__FILE__, __LINE__, __PRETTY_FUNCTION__}; \
+                                        GET_INFO(call_info); \
                                         stack_error_t err = CheckStackIntegrity(st); \
                                         if (err != stack_error_t::OK) { \
                                             StackDump(st, err, &call_info, str); \

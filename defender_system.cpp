@@ -1,8 +1,14 @@
 #include <stdio.h>
 
 #include "color_lib.h"
+#include "stack_lib.h"
 
 #include "defender_system.h"
+
+static size_t djb2(size_t hash, size_t field);
+static void DumpStackInfo(stack_type* stack, stack_error_t error, call_data_t* call_info);
+static void DumpStackFields(stack_type* stack, stack_error_t error);
+static void DumpStackData(stack_type* stack);
 
 
 stack_error_t CheckStackIntegrity(stack_type* stack) {
@@ -45,6 +51,67 @@ stack_error_t CheckStackIntegrity(stack_type* stack) {
 void StackDump(stack_type* stack, stack_error_t error, call_data_t* call_info, const char* message) {
     if (message != nullptr) { PrintColorVar(RED, "%s\n", message); }
 
+    DumpStackInfo(stack, error, call_info);
+
+    DumpStackFields(stack, error);
+
+    DumpStackData(stack);
+}
+
+//----------------------------------------------------------------------------------
+
+size_t CalculateStructHash(stack_type* stack) {
+    if (stack == nullptr) return 0;
+
+    size_t struct_hash = HASH_SEED;
+
+    // left struct canary
+    struct_hash = djb2(struct_hash, stack->left_canary);
+
+    // stack size
+    struct_hash = djb2(struct_hash, stack->size);
+
+    // stack capacity
+    struct_hash = djb2(struct_hash, stack->capacity);
+
+    // data pointer
+    struct_hash = djb2(struct_hash, (size_t)stack->data);
+
+    // right struct canary
+    struct_hash = djb2(struct_hash, stack->right_canary);
+
+    return struct_hash;
+}
+
+//----------------------------------------------------------------------------------
+
+size_t CalculateDataHash(stack_type* stack) {
+    if (stack == nullptr) return 0;
+
+    size_t data_hash = HASH_SEED;
+
+    // left data canary
+    data_hash = djb2(data_hash, (size_t)(*(stack->data - 1)));
+
+    for (size_t pos = 0; pos < stack->capacity; pos++) {
+        data_hash = djb2(data_hash, (size_t)stack->data[pos]);
+    }
+
+    // right data canary
+    data_hash = djb2(data_hash, (size_t)stack->data[stack->capacity]);
+
+    return data_hash;
+}
+
+//----------------------------------------------------------------------------------
+
+static size_t djb2(size_t hash, size_t field) {
+    return ((hash << 5) + hash) + field;
+}
+
+//----------------------------------------------------------------------------------
+
+static void DumpStackInfo(stack_type* stack, stack_error_t error, call_data_t* call_info) {
     printf("\nerror_in_file: ");
     PrintColorVar(YELLOW, "%s", call_info->file_name);
     printf("  line: ");
@@ -71,6 +138,11 @@ void StackDump(stack_type* stack, stack_error_t error, call_data_t* call_info, c
         PrintColorVar(YELLOW, "%s", stack->stack_info.func_name);
         printf("\n");
     }
+}
+
+//----------------------------------------------------------------------------------
+
+static void DumpStackFields(stack_type* stack, stack_error_t error) {
     switch(error) {
         case stack_error_t::STRUCT_CANARY_CORRUPT:
             printf("  STRUCT_CANARY: ");
@@ -161,13 +233,17 @@ void StackDump(stack_type* stack, stack_error_t error, call_data_t* call_info, c
             break;
         case stack_error_t::OK:
         case stack_error_t::NULL_POINTER:
-        case stack_error_t::SIZE_CAPACITY_INCONSISTENT:
+        case stack_error_t::CALLOC_FAILED:
         case stack_error_t::REALLOC_FAILED:
             return;
         default:
             return;
     }
+}
 
+//----------------------------------------------------------------------------------
+
+static void DumpStackData(stack_type* stack) {
     printf("  STACK_DATA (%zu/%zu):\n", stack->size, stack->capacity);
 
     PrintColor(BASE, "    [CANARY_LEFT] = ");
@@ -196,49 +272,4 @@ void StackDump(stack_type* stack, stack_error_t error, call_data_t* call_info, c
     } else {
         PRINT_STACK_ELEMENT(RED, stack->data[stack->capacity]);
     }
-}
-
-//----------------------------------------------------------------------------------
-
-size_t CalculateStructHash(stack_type* stack) {
-    if (stack == nullptr) return 0;
-
-    size_t struct_hash = HASH_SEED;
-
-    // left struct canary
-    struct_hash = ((struct_hash << 5) + struct_hash) + stack->left_canary;
-
-    // stack size
-    struct_hash = ((struct_hash << 5) + struct_hash) + stack->size;
-
-    // stack capacity
-    struct_hash = ((struct_hash << 5) + struct_hash) + stack->capacity;
-
-    // data pointer
-    struct_hash = ((struct_hash << 5) + struct_hash) + (size_t)stack->data;
-
-    // right struct canary
-    struct_hash = ((struct_hash << 5) + struct_hash) + stack->right_canary;
-
-    return struct_hash;
-}
-
-//----------------------------------------------------------------------------------
-
-size_t CalculateDataHash(stack_type* stack) {
-    if (stack == nullptr) return 0;
-
-    size_t data_hash = HASH_SEED;
-
-    // left data canary
-    data_hash = ((data_hash << 5) + data_hash) + (size_t)(*(stack->data - 1));
-
-    for (size_t pos = 0; pos < stack->capacity; pos++) {
-        data_hash = ((data_hash << 5) + data_hash) + (size_t)stack->data[pos];
-    }
-
-    // right data canary
-    data_hash = ((data_hash << 5) + data_hash) + (size_t)stack->data[stack->capacity];
-
-    return data_hash;
 }

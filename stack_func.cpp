@@ -7,15 +7,24 @@
 #include "defender_system.h"
 #include "stack_func.h"
 
-static stack_error_t StackUpCapacity(stack_type* stack);
+static stack_error_t StackIncreaseCapacity(stack_type* stack);
+static stack_error_t StackDownCapacity(stack_type* stack);
 
 
 stack_error_t StackCtor(stack_type* stack, const size_t capacity) {
 
-    stack->left_canary   = STRUCT_CANARY_DEFAULT; // struct canary
-    stack->size = 0;
-    stack->capacity      = capacity;
-    stack->data          = (stack_elem_t*)calloc(capacity + 2, sizeof(stack_elem_t)) + 1;
+    stack->left_canary  = STRUCT_CANARY_DEFAULT; // struct canary
+    stack->size         = 0;
+    stack->capacity     = capacity;
+
+    stack_elem_t* buf_data = (stack_elem_t*)calloc(capacity + 2, sizeof(stack_elem_t)) + 1;
+    if (buf_data == nullptr) {
+        GET_INFO(call_info);
+        StackDump(stack, stack_error_t::CALLOC_FAILED, &call_info, "calloc failed");
+        return stack_error_t::CALLOC_FAILED;
+    }
+
+    stack->data         = buf_data;
 
     *(stack->data - 1)    = CANARY_DEFAULT;
     stack->data[capacity] = CANARY_DEFAULT;
@@ -39,7 +48,7 @@ stack_error_t StackPush(stack_type* stack, const stack_elem_t value) {
     STACK_VERIFY(stack, "error before push");
 
     if (stack->size + 1 == stack->capacity) {
-        StackUpCapacity(stack);
+        StackIncreaseCapacity(stack);
     }
     stack->data[stack->size++] = value;
 
@@ -63,8 +72,12 @@ stack_error_t StackPop(stack_type* stack, stack_elem_t* value) {
 
         stack->data_hash   = CalculateDataHash(stack);
         stack->struct_hash = CalculateStructHash(stack);
+
+        if (stack->size == stack->capacity / 4 && stack->size > 1) {
+            StackDownCapacity(stack);
+        }
     } else {
-        call_data_t call_info = {__FILE__, __LINE__, __PRETTY_FUNCTION__};
+        GET_INFO(call_info);
         StackDump(stack, stack_error_t::POP_EMPTY_STACK, &call_info, "pop from empty stack");
         return stack_error_t::POP_EMPTY_STACK;
     }
@@ -121,7 +134,7 @@ stack_error_t PrintStack(stack_type* stack) {
 
 //----------------------------------------------------------------------------------
 
-static stack_error_t StackUpCapacity(stack_type* stack) {
+static stack_error_t StackIncreaseCapacity(stack_type* stack) {
     STACK_VERIFY(stack, "error before realloc");
 
     stack->capacity *= 2;
@@ -129,7 +142,37 @@ static stack_error_t StackUpCapacity(stack_type* stack) {
     stack_elem_t* new_data = (stack_elem_t*)realloc(stack->data - 1, (stack->capacity + 2) * sizeof(stack_elem_t));
 
     if (new_data == nullptr) {
-        call_data_t call_info = {__FILE__, __LINE__, __PRETTY_FUNCTION__};
+        GET_INFO(call_info);
+        StackDump(stack, stack_error_t::REALLOC_FAILED, &call_info, "realloc failed");
+        return stack_error_t::REALLOC_FAILED;
+    }
+
+    stack->data                  = new_data + 1;
+
+    for (size_t pos = stack->size; pos < stack->capacity; pos++) {
+        stack->data[pos] = POISON;
+    }
+
+    stack->data[stack->capacity] = CANARY_DEFAULT;
+    stack->data_hash             = CalculateDataHash(stack);
+    stack->struct_hash           = CalculateStructHash(stack);
+
+    STACK_VERIFY(stack, "error after realloc");
+
+    return stack_error_t::OK;
+}
+
+//----------------------------------------------------------------------------------
+
+static stack_error_t StackDownCapacity(stack_type* stack) {
+    STACK_VERIFY(stack, "error before realloc");
+
+    stack->capacity /= 4;
+
+    stack_elem_t* new_data = (stack_elem_t*)realloc(stack->data - 1, (stack->capacity + 2) * sizeof(stack_elem_t));
+
+    if (new_data == nullptr) {
+        GET_INFO(call_info);
         StackDump(stack, stack_error_t::REALLOC_FAILED, &call_info, "realloc failed");
         return stack_error_t::REALLOC_FAILED;
     }
