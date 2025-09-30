@@ -7,10 +7,14 @@
 
 #ifdef DEBUG
 static size_t djb2(size_t hash, size_t field);
+
+static result DumpCallInfo(call_data_t* call_info);
 #endif
-static result DumpStackInfo(stack_type* stack, call_data_t* call_info);
+
+static result DumpStackInfo(stack_type* stack);
 static result DumpStackFields(stack_type* stack);
-static void DumpStackData(stack_type* stack);
+static result DumpStackData(stack_type* stack);
+
 #ifdef DEBUG
 static inline stack_elem_t GetLeftDataCanary(stack_type* stack);
 static inline stack_elem_t GetRightDataCanary(stack_type* stack);
@@ -56,17 +60,26 @@ stack_error_t CheckStackIntegrity(stack_type* stack) {
 }
 
 //----------------------------------------------------------------------------------
-
+#ifdef DEBUG
 void StackDump(stack_type* stack, call_data_t* call_info, const char* message) {
     if (message != nullptr) { PrintColorVar(RED, "%s\n", message); }
 
-    if (DumpStackInfo(stack, call_info) == result::CONTINUE) {
-        if (DumpStackFields(stack) == result::CONTINUE) {
-            DumpStackData(stack);
-        }
-    }
-}
+    if (DumpCallInfo(call_info) == result::STOP) { return; }
+    if (DumpStackInfo(stack)    == result::STOP) { return; }
+    if (DumpStackFields(stack)  == result::STOP) { return; }
 
+    DumpStackData(stack);
+}
+#else
+void StackDump(stack_type* stack, const char* message) {
+    if (message != nullptr) { PrintColorVar(RED, "%s\n", message); }
+
+    if (DumpStackInfo(stack)    == result::STOP) { return; }
+    if (DumpStackFields(stack)  == result::STOP) { return; }
+
+    DumpStackData(stack);
+}
+#endif
 //----------------------------------------------------------------------------------
 #ifdef DEBUG
 size_t CalculateStructHash(stack_type* stack) {
@@ -117,10 +130,10 @@ size_t CalculateDataHash(stack_type* stack) {
 static size_t djb2(size_t hash, size_t field) {
     return ((hash << 5) + hash) + field;
 }
-#endif
+
 //----------------------------------------------------------------------------------
 
-static result DumpStackInfo(stack_type* stack, call_data_t* call_info) {
+static result DumpCallInfo(call_data_t* call_info) {
     printf("\nerror_in_file: ");
     PrintColorVar(YELLOW, "%s", call_info->file_name);
     printf("  line: ");
@@ -129,7 +142,12 @@ static result DumpStackInfo(stack_type* stack, call_data_t* call_info) {
     PrintColorVar(YELLOW, "%s", call_info->func_name);
     printf("\n\n");
 
+    return result::CONTINUE;
+}
+#endif
+//----------------------------------------------------------------------------------
 
+static result DumpStackInfo(stack_type* stack) {
     if (stack == nullptr) {
         printf("STACK_POINTER: ");
         PrintColor(RED, "CORRUPTED\n");
@@ -289,7 +307,7 @@ static result DumpStackFields(stack_type* stack) {
 
 //----------------------------------------------------------------------------------
 
-static void DumpStackData(stack_type* stack) {
+static result DumpStackData(stack_type* stack) {
     printf("  STACK_DATA (%zu/%zu):\n", stack->size, stack->capacity);
 
     #ifdef DEBUG
@@ -324,6 +342,8 @@ static void DumpStackData(stack_type* stack) {
         PRINT_STACK_ELEMENT(RED, right_data_canary);
     }
     #endif
+
+    return result::STOP;
 }
 
 //----------------------------------------------------------------------------------

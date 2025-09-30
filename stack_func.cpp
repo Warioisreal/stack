@@ -14,9 +14,15 @@ static inline void StackFillPoison(stack_type* stack);
 stack_error_t StackCtor(stack_type* stack, const size_t capacity) {
 
     if (capacity > MAX_STACK_CAPACITY) {
+        #ifdef DEBUG
         GET_INFO(call_info);
+        #endif
         stack->error = stack_error_t::CAPACITY_TOO_LARGE;
+        #ifdef DEBUG
         StackDump(stack, &call_info, "requested capacity exceeds maximum limit");
+        #else
+        StackDump(stack, "requested capacity exceeds maximum limit");
+        #endif
         return stack_error_t::CAPACITY_TOO_LARGE;
     }
 
@@ -34,9 +40,15 @@ stack_error_t StackCtor(stack_type* stack, const size_t capacity) {
     #endif
 
     if (buf_data == nullptr) {
+        #ifdef DEBUG
         GET_INFO(call_info);
+        #endif
         stack->error = stack_error_t::CALLOC_FAILED;
+        #ifdef DEBUG
         StackDump(stack, &call_info, "calloc failed");
+        #else
+        StackDump(stack, "calloc failed");
+        #endif
         return stack_error_t::CALLOC_FAILED;
     }
 
@@ -100,9 +112,15 @@ stack_error_t StackPop(stack_type* stack, stack_elem_t* value) {
             StackShrinkCapacity(stack);
         }
     } else {
+        #ifdef DEBUG
         GET_INFO(call_info);
+        #endif
         stack->error = stack_error_t::POP_EMPTY_STACK;
+        #ifdef DEBUG
         StackDump(stack, &call_info, "pop from empty stack");
+        #else
+        StackDump(stack, "pop from empty stack");
+        #endif
         return stack_error_t::POP_EMPTY_STACK;
     }
 
@@ -166,9 +184,15 @@ static stack_error_t StackIncreaseCapacity(stack_type* stack) {
     STACK_VERIFY_AND_RETURN(stack, "error before realloc");
 
     if (stack->capacity * 2 > MAX_STACK_CAPACITY) {
+        #ifdef DEBUG
         GET_INFO(call_info);
+        #endif
         stack->error = stack_error_t::CAPACITY_TOO_LARGE;
+        #ifdef DEBUG
         StackDump(stack, &call_info, "stack capacity would exceed maximum limit during expansion");
+        #else
+        StackDump(stack, "stack capacity would exceed maximum limit during expansion");
+        #endif
         return stack_error_t::CAPACITY_TOO_LARGE;
     }
 
@@ -181,9 +205,15 @@ static stack_error_t StackIncreaseCapacity(stack_type* stack) {
     #endif
 
     if (new_data == nullptr) {
+        #ifdef DEBUG
         GET_INFO(call_info);
+        #endif
         stack->error = stack_error_t::REALLOC_FAILED;
+        #ifdef DEBUG
         StackDump(stack, &call_info, "realloc failed");
+        #else
+        StackDump(stack, "realloc failed");
+        #endif
         return stack_error_t::REALLOC_FAILED;
     }
 
@@ -220,9 +250,15 @@ static stack_error_t StackShrinkCapacity(stack_type* stack) {
     #endif
 
     if (new_data == nullptr) {
+        #ifdef DEBUG
         GET_INFO(call_info);
+        #endif
         stack->error = stack_error_t::REALLOC_FAILED;
+        #ifdef DEBUG
         StackDump(stack, &call_info, "realloc failed");
+        #else
+        StackDump(stack, "realloc failed");
+        #endif
         return stack_error_t::REALLOC_FAILED;
     }
 
