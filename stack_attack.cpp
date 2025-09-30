@@ -9,11 +9,8 @@ void AttackCorruptStructCanaries(stack_type* stack) {
     printf("[ATTACK] Corrupting struct canaries...\n");
 
     // Повреждаем обе канарейки структуры
-    stack->left_canary = 0xDEADBEEF;
+    stack->left_canary  = 0xDEADBEEF;
     stack->right_canary = 0xBADF00D;
-
-    // Добавляем неконсистентность
-    stack->size = stack->capacity + 5;
 }
 
 // Повреждение хешей
@@ -22,7 +19,7 @@ void AttackCorruptHashes(stack_type* stack) {
 
     // Портим оба хеша
     stack->struct_hash = 0x12345678;
-    stack->data_hash = 0x87654321;
+    stack->data_hash   = 0x87654321;
 
     // Слегка меняем данные чтобы хеши точно не совпали
     if (stack->size > 0) {
@@ -64,12 +61,12 @@ void AttackCombinedDestruction(stack_type* stack) {
     printf("[ATTACK] Launching combined destruction...\n");
 
     // 1. Портим канарейки структуры
-    stack->left_canary = 0;
+    stack->left_canary  = 0;
     stack->right_canary = 0;
 
     // 2. Портим хеши
     stack->struct_hash = 0;
-    stack->data_hash = 0;
+    stack->data_hash   = 0;
 
     // 3. Создаем неконсистентность размера
     stack->size = stack->capacity + 50;

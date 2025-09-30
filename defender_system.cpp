@@ -22,7 +22,7 @@ stack_error_t CheckStackIntegrity(stack_type* stack) {
 
     #ifdef DEBUG
     // check struct canary
-    if (stack->left_canary != STRUCT_CANARY_DEFAULT ||
+    if (stack->left_canary  != STRUCT_CANARY_DEFAULT ||
         stack->right_canary != STRUCT_CANARY_DEFAULT) { return stack_error_t::STRUCT_CANARY_CORRUPT; }
     #endif
 

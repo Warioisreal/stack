@@ -21,16 +21,18 @@ stack_error_t StackCtor(stack_type* stack, const size_t capacity) {
     }
 
     #ifdef DEBUG
-    stack->left_canary  = STRUCT_CANARY_DEFAULT; // struct canary
+    stack->left_canary = STRUCT_CANARY_DEFAULT; // struct canary
     #endif
-    stack->size         = 0;
-    stack->capacity     = capacity;
+
+    stack->size        = 0;
+    stack->capacity    = capacity;
 
     #ifdef DEBUG
     stack_elem_t* buf_data = (stack_elem_t*)calloc(capacity + 2, sizeof(stack_elem_t)) + 1;
     #else
     stack_elem_t* buf_data = (stack_elem_t*)calloc(capacity, sizeof(stack_elem_t));
     #endif
+
     if (buf_data == nullptr) {
         GET_INFO(call_info);
         stack->error = stack_error_t::CALLOC_FAILED;
@@ -38,7 +40,7 @@ stack_error_t StackCtor(stack_type* stack, const size_t capacity) {
         return stack_error_t::CALLOC_FAILED;
     }
 
-    stack->data         = buf_data;
+    stack->data = buf_data;
 
     #ifdef DEBUG
     *(stack->data - 1)    = CANARY_DEFAULT;
@@ -55,7 +57,7 @@ stack_error_t StackCtor(stack_type* stack, const size_t capacity) {
     stack->struct_hash  = CalculateStructHash(stack);
     #endif
 
-    STACK_VERIFY(stack, "stack construction error");
+    STACK_VERIFY_AND_RETURN(stack, "stack construction error");
 
     return stack_error_t::OK;
 }
@@ -63,7 +65,7 @@ stack_error_t StackCtor(stack_type* stack, const size_t capacity) {
 //----------------------------------------------------------------------------------
 
 stack_error_t StackPush(stack_type* stack, const stack_elem_t value) {
-    STACK_VERIFY(stack, "error before push");
+    STACK_VERIFY_AND_RETURN(stack, "error before push");
 
     if (stack->size + 1 == stack->capacity) {
         StackIncreaseCapacity(stack);
@@ -75,7 +77,7 @@ stack_error_t StackPush(stack_type* stack, const stack_elem_t value) {
     stack->struct_hash = CalculateStructHash(stack);
     #endif
 
-    STACK_VERIFY(stack, "error after push");
+    STACK_VERIFY_AND_RETURN(stack, "error after push");
 
     return stack_error_t::OK;
 }
@@ -83,7 +85,7 @@ stack_error_t StackPush(stack_type* stack, const stack_elem_t value) {
 //----------------------------------------------------------------------------------
 
 stack_error_t StackPop(stack_type* stack, stack_elem_t* value) {
-    STACK_VERIFY(stack, "error before pop");
+    STACK_VERIFY_AND_RETURN(stack, "error before pop");
 
     if (stack->size > 0) {
         *value = stack->data[--stack->size];
@@ -105,7 +107,7 @@ stack_error_t StackPop(stack_type* stack, stack_elem_t* value) {
         return stack_error_t::POP_EMPTY_STACK;
     }
 
-    STACK_VERIFY(stack, "error after pop");
+    STACK_VERIFY_AND_RETURN(stack, "error after pop");
 
     return stack_error_t::OK;
 }
@@ -113,7 +115,7 @@ stack_error_t StackPop(stack_type* stack, stack_elem_t* value) {
 //----------------------------------------------------------------------------------
 
 stack_error_t StackDtor(stack_type* stack) {
-    STACK_VERIFY(stack, "error before destruction");
+    STACK_VERIFY_AND_RETURN(stack, "error before destruction");
 
     #ifdef DEBUG
     stack->left_canary   = 0;
@@ -140,7 +142,7 @@ stack_error_t StackDtor(stack_type* stack) {
 //----------------------------------------------------------------------------------
 
 stack_error_t PrintStack(stack_type* stack) {
-    STACK_VERIFY(stack, "error before print");
+    STACK_VERIFY_AND_RETURN(stack, "error before print");
 
     for (size_t pos = 0; pos < stack->capacity; pos++) {
         if (pos < stack->size) {
@@ -162,7 +164,7 @@ stack_error_t PrintStack(stack_type* stack) {
 //----------------------------------------------------------------------------------
 
 static stack_error_t StackIncreaseCapacity(stack_type* stack) {
-    STACK_VERIFY(stack, "error before realloc");
+    STACK_VERIFY_AND_RETURN(stack, "error before realloc");
 
     if (stack->capacity * 2 > MAX_STACK_CAPACITY) {
         GET_INFO(call_info);
@@ -187,9 +189,9 @@ static stack_error_t StackIncreaseCapacity(stack_type* stack) {
     }
 
     #ifdef DEBUG
-    stack->data                  = new_data + 1;
+    stack->data = new_data + 1;
     #else
-    stack->data                  = new_data;
+    stack->data = new_data;
     #endif
 
     for (size_t pos = stack->size; pos < stack->capacity; pos++) {
@@ -202,7 +204,7 @@ static stack_error_t StackIncreaseCapacity(stack_type* stack) {
     stack->struct_hash           = CalculateStructHash(stack);
     #endif
 
-    STACK_VERIFY(stack, "error after realloc");
+    STACK_VERIFY_AND_RETURN(stack, "error after realloc");
 
     return stack_error_t::OK;
 }
@@ -210,7 +212,7 @@ static stack_error_t StackIncreaseCapacity(stack_type* stack) {
 //----------------------------------------------------------------------------------
 
 static stack_error_t StackShrinkCapacity(stack_type* stack) {
-    STACK_VERIFY(stack, "error before realloc");
+    STACK_VERIFY_AND_RETURN(stack, "error before realloc");
 
     stack->capacity /= 2;
 
@@ -228,9 +230,9 @@ static stack_error_t StackShrinkCapacity(stack_type* stack) {
     }
 
     #ifdef DEBUG
-    stack->data                  = new_data + 1;
+    stack->data = new_data + 1;
     #else
-    stack->data                  = new_data;
+    stack->data = new_data;
     #endif
 
     for (size_t pos = stack->size; pos < stack->capacity; pos++) {
@@ -243,7 +245,7 @@ static stack_error_t StackShrinkCapacity(stack_type* stack) {
     stack->struct_hash           = CalculateStructHash(stack);
     #endif
 
-    STACK_VERIFY(stack, "error after realloc");
+    STACK_VERIFY_AND_RETURN(stack, "error after realloc");
 
     return stack_error_t::OK;
 }

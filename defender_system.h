@@ -21,7 +21,7 @@ typedef const enum class DumpResult: char {
 
 #define GET_INFO(name) call_data_t name = {__FILE__, __LINE__, __PRETTY_FUNCTION__}
 
-#define STACK_VERIFY(st, str) BEGIN { \
+#define STACK_VERIFY_AND_RETURN(st, str) BEGIN { \
                                         GET_INFO(call_info); \
                                         stack_error_t err = CheckStackIntegrity(st); \
                                         if (err != stack_error_t::OK) { \
