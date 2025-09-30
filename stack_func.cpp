@@ -9,7 +9,7 @@
 
 static stack_error_t StackIncreaseCapacity(stack_type* stack);
 static stack_error_t StackShrinkCapacity(stack_type* stack);
-
+static inline void StackFillPoison(stack_type* stack);
 
 stack_error_t StackCtor(stack_type* stack, const size_t capacity) {
 
@@ -47,9 +47,8 @@ stack_error_t StackCtor(stack_type* stack, const size_t capacity) {
     stack->data[capacity] = CANARY_DEFAULT;
     #endif
 
-    for (size_t pos = 0; pos < capacity; pos++) {
-        stack->data[pos] = POISON;
-    }
+
+    StackFillPoison(stack);
 
     #ifdef DEBUG
     stack->data_hash    = CalculateDataHash(stack);
@@ -194,9 +193,7 @@ static stack_error_t StackIncreaseCapacity(stack_type* stack) {
     stack->data = new_data;
     #endif
 
-    for (size_t pos = stack->size; pos < stack->capacity; pos++) {
-        stack->data[pos] = POISON;
-    }
+    StackFillPoison(stack);
 
     #ifdef DEBUG
     stack->data[stack->capacity] = CANARY_DEFAULT;
@@ -235,9 +232,7 @@ static stack_error_t StackShrinkCapacity(stack_type* stack) {
     stack->data = new_data;
     #endif
 
-    for (size_t pos = stack->size; pos < stack->capacity; pos++) {
-        stack->data[pos] = POISON;
-    }
+    StackFillPoison(stack);
 
     #ifdef DEBUG
     stack->data[stack->capacity] = CANARY_DEFAULT;
@@ -248,4 +243,12 @@ static stack_error_t StackShrinkCapacity(stack_type* stack) {
     STACK_VERIFY_AND_RETURN(stack, "error after realloc");
 
     return stack_error_t::OK;
+}
+
+//----------------------------------------------------------------------------------
+
+static inline void StackFillPoison(stack_type* stack) {
+    for (size_t pos = stack->size; pos < stack->capacity; pos++) {
+        stack->data[pos] = POISON;
+    }
 }
