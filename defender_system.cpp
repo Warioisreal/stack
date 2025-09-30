@@ -5,33 +5,41 @@
 
 #include "defender_system.h"
 
+#ifdef DEBUG
 static size_t djb2(size_t hash, size_t field);
-static void DumpStackInfo(stack_type* stack, stack_error_t error, call_data_t* call_info);
-static void DumpStackFields(stack_type* stack, stack_error_t error);
+#endif
+static result DumpStackInfo(stack_type* stack, call_data_t* call_info);
+static result DumpStackFields(stack_type* stack);
 static void DumpStackData(stack_type* stack);
-
+#ifdef DEBUG
+static inline stack_elem_t GetLeftDataCanary(stack_type* stack);
+static inline stack_elem_t GetRightDataCanary(stack_type* stack);
+#endif
 
 stack_error_t CheckStackIntegrity(stack_type* stack) {
 
     // check stack pointer
-    if (stack == nullptr) { return stack_error_t::NULL_POINTER; }
+    if ((size_t)stack < 0x1000) { return stack_error_t::STACK_POINTER_CORRUPT; }
 
+    #ifdef DEBUG
     // check struct canary
     if (stack->left_canary != STRUCT_CANARY_DEFAULT ||
         stack->right_canary != STRUCT_CANARY_DEFAULT) { return stack_error_t::STRUCT_CANARY_CORRUPT; }
+    #endif
 
     // check stack capacity
     if (stack->capacity == 0) { return stack_error_t::ZERO_CAPACITY; }
 
     // check data pointer
-    if (stack->data == nullptr) { return stack_error_t::DATA_NULL_POINTER; }
+    if ((size_t)stack->data < 0x1000) { return stack_error_t::DATA_POINTER_CORRUPT; }
 
     // check struct size
     if (stack->size > stack->capacity) { return stack_error_t::SIZE_OVER_CAPACITY; }
 
+    #ifdef DEBUG
     // check data canary
-    if (*(stack->data - 1) != CANARY_DEFAULT ||
-        stack->data[stack->capacity] != CANARY_DEFAULT) { return stack_error_t::DATA_CANARY_CORRUPT; }
+    if (GetLeftDataCanary(stack) != CANARY_DEFAULT ||
+        GetRightDataCanary(stack) != CANARY_DEFAULT) { return stack_error_t::DATA_CANARY_CORRUPT; }
 
     // calculating current struct_hash and data_hash
     size_t current_struct_hash = CalculateStructHash(stack);
@@ -42,26 +50,27 @@ stack_error_t CheckStackIntegrity(stack_type* stack) {
 
     // check data_hash
     if (current_data_hash != stack->data_hash) { return stack_error_t::HASH_MISMATCH; }
+    #endif
 
     return stack_error_t::OK;
 }
 
 //----------------------------------------------------------------------------------
 
-void StackDump(stack_type* stack, stack_error_t error, call_data_t* call_info, const char* message) {
+void StackDump(stack_type* stack, call_data_t* call_info, const char* message) {
     if (message != nullptr) { PrintColorVar(RED, "%s\n", message); }
 
-    DumpStackInfo(stack, error, call_info);
-
-    DumpStackFields(stack, error);
-
-    DumpStackData(stack);
+    if (DumpStackInfo(stack, call_info) == result::CONTINUE) {
+        if (DumpStackFields(stack) == result::CONTINUE) {
+            DumpStackData(stack);
+        }
+    }
 }
 
 //----------------------------------------------------------------------------------
-
+#ifdef DEBUG
 size_t CalculateStructHash(stack_type* stack) {
-    if (stack == nullptr) return 0;
+    if (stack == nullptr) { return 0; }
 
     size_t struct_hash = HASH_SEED;
 
@@ -91,14 +100,14 @@ size_t CalculateDataHash(stack_type* stack) {
     size_t data_hash = HASH_SEED;
 
     // left data canary
-    data_hash = djb2(data_hash, (size_t)(*(stack->data - 1)));
+    data_hash = djb2(data_hash, (size_t)GetLeftDataCanary(stack));
 
     for (size_t pos = 0; pos < stack->capacity; pos++) {
         data_hash = djb2(data_hash, (size_t)stack->data[pos]);
     }
 
     // right data canary
-    data_hash = djb2(data_hash, (size_t)stack->data[stack->capacity]);
+    data_hash = djb2(data_hash, (size_t)GetRightDataCanary(stack));
 
     return data_hash;
 }
@@ -108,10 +117,10 @@ size_t CalculateDataHash(stack_type* stack) {
 static size_t djb2(size_t hash, size_t field) {
     return ((hash << 5) + hash) + field;
 }
-
+#endif
 //----------------------------------------------------------------------------------
 
-static void DumpStackInfo(stack_type* stack, stack_error_t error, call_data_t* call_info) {
+static result DumpStackInfo(stack_type* stack, call_data_t* call_info) {
     printf("\nerror_in_file: ");
     PrintColorVar(YELLOW, "%s", call_info->file_name);
     printf("  line: ");
@@ -120,14 +129,22 @@ static void DumpStackInfo(stack_type* stack, stack_error_t error, call_data_t* c
     PrintColorVar(YELLOW, "%s", call_info->func_name);
     printf("\n\n");
 
-    printf("stack(");
-    if (error == stack_error_t::NULL_POINTER) {
+
+    if (stack == nullptr) {
+        printf("STACK_POINTER: ");
+        PrintColor(RED, "CORRUPTED\n");
+        printf("    stack = ");
         PrintColorVar(RED, "%p", stack);
-        printf(")\n");
-        return;
+        if (stack == nullptr) {
+            printf(" (null pointer)\n");
+        } else {
+            printf(" (suspicious value: %p)\n", stack);
+        }
+        return result::STOP;
     } else {
-        PrintColorVar(BLUE, "%p", stack);
-        printf(")");
+        printf("STACK_POINTER: ");
+        PrintColorVar(BLUE, "%p\n", stack);
+        #ifdef DEBUG
         printf("  stack_object_name: ");
         PrintColorVar(YELLOW, "%s", stack->stack_info.obj_name);
         printf("  create_in_file: ");
@@ -136,15 +153,21 @@ static void DumpStackInfo(stack_type* stack, stack_error_t error, call_data_t* c
         PrintColorVar(YELLOW, "%d", stack->stack_info.line_number);
         printf("  function: ");
         PrintColorVar(YELLOW, "%s", stack->stack_info.func_name);
+        #endif
         printf("\n");
     }
+    return result::CONTINUE;
 }
 
 //----------------------------------------------------------------------------------
 
-static void DumpStackFields(stack_type* stack, stack_error_t error) {
+static result DumpStackFields(stack_type* stack) {
+
+    stack_error_t error = stack->error;
+
     switch(error) {
         case stack_error_t::STRUCT_CANARY_CORRUPT:
+            #ifdef DEBUG
             printf("  STRUCT_CANARY: ");
             PrintColor(RED, "CORRUPTED\n");
             printf("    left_canary = ");
@@ -165,54 +188,65 @@ static void DumpStackFields(stack_type* stack, stack_error_t error) {
             } else {
                 PrintColorVar(GREEN, "0x%zu\n", stack->right_canary);
             }
-            return;
+            #endif
+            return result::STOP;
 
         case stack_error_t::SIZE_OVER_CAPACITY:
             printf("  SIZE: ");
             PrintColor(RED, "OVERFLOW\n");
             printf("    size = ");
-            PrintColorVar(RED, "%zu", stack->size);
+            PrintColorVar(RED, "%zu\n", stack->size);
             printf("    capacity = ");
-            PrintColorVar(RED, "%zu", stack->capacity);
+            PrintColorVar(RED, "%zu\n", stack->capacity);
             printf("\n");
-            return;
+            return result::STOP;
 
         case stack_error_t::ZERO_CAPACITY:
             printf("  CAPACITY: ");
             PrintColor(RED, "ZERO\n");
-            return;
+            return result::STOP;
 
-        case stack_error_t::DATA_NULL_POINTER:
-            printf("  DATA: ");
-            PrintColor(RED, "NULL_POINTER\n");
-            return;
+        case stack_error_t::DATA_POINTER_CORRUPT:
+            printf("  DATA_POINTER: ");
+            PrintColor(RED, "CORRUPTED\n");
+            printf("    data = ");
+            PrintColorVar(RED, "%p", stack->data);
+            if (stack->data == nullptr) {
+                printf(" (null pointer)\n");
+            } else {
+                printf(" (suspicious value: %p)\n", stack->data);
+            }
+            return result::STOP;
 
         case stack_error_t::DATA_CANARY_CORRUPT:
+            #ifdef DEBUG
             printf("  DATA_CANARY: ");
             PrintColor(RED, "CORRUPTED\n");
 
             printf("    left_data_canary = ");
-            if (*(stack->data - 1) != CANARY_DEFAULT) {
-                PRINT_STACK_CANARY(RED, *(stack->data - 1));
+            if (GetLeftDataCanary(stack) != CANARY_DEFAULT) {
+                PRINT_STACK_CANARY(RED, GetLeftDataCanary(stack));
                 printf(" (expected: ");
                 PRINT_STACK_CANARY(GREEN, CANARY_DEFAULT);
                 printf(")\n");
             } else {
-                PRINT_STACK_CANARY(GREEN, *(stack->data - 1));
+                PRINT_STACK_CANARY(GREEN, GetLeftDataCanary(stack));
             }
 
             printf("    right_data_canary = ");
-            if (stack->data[stack->capacity] != CANARY_DEFAULT) {
-                PRINT_STACK_CANARY(RED, stack->data[stack->capacity]);
+            if (GetRightDataCanary(stack) != CANARY_DEFAULT) {
+                PRINT_STACK_CANARY(RED, GetRightDataCanary(stack));
                 printf(" (expected: ");
                 PRINT_STACK_CANARY(GREEN, CANARY_DEFAULT);
                 printf(")\n");
             } else {
-                PRINT_STACK_CANARY(GREEN, stack->data[stack->capacity]);
+                PRINT_STACK_CANARY(GREEN, GetRightDataCanary(stack));
             }
+            #endif
             break;
 
         case stack_error_t::HASH_MISMATCH:
+            #ifdef DEBUG
             printf("  HASH: ");
             PrintColor(RED, "MISMATCH\n");
             printf("    struct_hash = ");
@@ -225,20 +259,22 @@ static void DumpStackFields(stack_type* stack, stack_error_t error) {
             printf(" (current: ");
             PrintColorVar(GREEN, "%zu", CalculateDataHash(stack));
             printf(")\n");
-            break;
+            #endif
+            return result::STOP;
 
         case stack_error_t::POP_EMPTY_STACK:
             printf("  OPERATION: ");
             PrintColor(RED, "POP_FROM_EMPTY_STACK\n");
             break;
         case stack_error_t::OK:
-        case stack_error_t::NULL_POINTER:
+        case stack_error_t::STACK_POINTER_CORRUPT:
         case stack_error_t::CALLOC_FAILED:
         case stack_error_t::REALLOC_FAILED:
-            return;
+            return result::STOP;
         default:
-            return;
+            return result::STOP;
     }
+    return result::CONTINUE;
 }
 
 //----------------------------------------------------------------------------------
@@ -246,12 +282,15 @@ static void DumpStackFields(stack_type* stack, stack_error_t error) {
 static void DumpStackData(stack_type* stack) {
     printf("  STACK_DATA (%zu/%zu):\n", stack->size, stack->capacity);
 
+    #ifdef DEBUG
     PrintColor(BASE, "    [CANARY_LEFT] = ");
-    if (*(stack->data - 1) == CANARY_DEFAULT) {
-        PRINT_STACK_ELEMENT(GREEN, *(stack->data - 1));
+    stack_elem_t left_data_canary = GetLeftDataCanary(stack);
+    if (left_data_canary == CANARY_DEFAULT) {
+        PRINT_STACK_ELEMENT(GREEN, left_data_canary);
     } else {
-        PRINT_STACK_ELEMENT(RED, *(stack->data - 1));
+        PRINT_STACK_ELEMENT(RED, left_data_canary);
     }
+    #endif
 
     for (size_t pos = 0; pos < stack->capacity; pos++) {
         if (pos < stack->size) {
@@ -261,15 +300,31 @@ static void DumpStackData(stack_type* stack) {
             PrintColorVar(BASE, "    >[%zu] = ", pos);
             PRINT_STACK_ELEMENT(YELLOW, stack->data[pos]);
         } else {
-            PrintColorVar(BASE, "    p[%zu] = ", pos);
-            PRINT_STACK_ELEMENT(RED, stack->data[pos]);
+            PrintColorVar(GREY, "    p[%zu] = ", pos);
+            PRINT_STACK_ELEMENT(GREY, stack->data[pos]);
         }
     }
 
+    #ifdef DEBUG
     PrintColor(BASE, "    [CANARY_RIGHT] = ");
-    if (stack->data[stack->capacity] == CANARY_DEFAULT) {
-        PRINT_STACK_ELEMENT(GREEN, stack->data[stack->capacity]);
+    stack_elem_t right_data_canary = GetRightDataCanary(stack);
+    if (right_data_canary == CANARY_DEFAULT) {
+        PRINT_STACK_ELEMENT(GREEN, right_data_canary);
     } else {
-        PRINT_STACK_ELEMENT(RED, stack->data[stack->capacity]);
+        PRINT_STACK_ELEMENT(RED, right_data_canary);
     }
+    #endif
 }
+
+//----------------------------------------------------------------------------------
+#ifdef DEBUG
+static inline stack_elem_t GetLeftDataCanary(stack_type* stack) {
+    return *(stack->data - 1);
+}
+
+//----------------------------------------------------------------------------------
+
+static inline stack_elem_t GetRightDataCanary(stack_type* stack) {
+    return stack->data[stack->capacity];
+}
+#endif

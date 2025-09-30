@@ -6,8 +6,6 @@
 
 #include "defender_system.h"
 
-#define PRINT_VAR_NAME(var) printf("%s\n", #var)
-
 
 stack_error_t StackCtor(stack_type* stack, const size_t capacity);
 stack_error_t StackPush(stack_type* stack, const stack_elem_t value);
