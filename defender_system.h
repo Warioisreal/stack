@@ -19,6 +19,8 @@ typedef const enum class DumpResult: char {
     STOP = 1
 } result;
 
+#define CHECK_ERROR(error) if (error != stack_error_t::OK) { return (int)error; }
+
 #define GET_INFO(name) call_data_t name = {__FILE__, __LINE__, __PRETTY_FUNCTION__}
 
 #define STACK_VERIFY_AND_RETURN(st, str) BEGIN { \

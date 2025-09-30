@@ -6,6 +6,14 @@
 
 #include "defender_system.h"
 
+#ifdef DEBUG
+#define INIT(name) .stack_info = {__FILE__, __LINE__, __PRETTY_FUNCTION__, #name}
+#else
+#define INIT(name)
+#endif
+
+#define CREATE_STACK(name) stack_type name = {INIT(name)}
+
 
 stack_error_t StackCtor(stack_type* stack, const size_t capacity);
 stack_error_t StackPush(stack_type* stack, const stack_elem_t value);

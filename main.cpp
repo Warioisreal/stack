@@ -8,15 +8,6 @@
 
 #include "stack_attack.h"
 
-#define CHECK_ERROR(error) if (error != stack_error_t::OK) { return (int)error; }
-
-#ifdef DEBUG
-#define INIT(name) .stack_info = {__FILE__, __LINE__, __PRETTY_FUNCTION__, #name}
-#define CREATE_STACK(name) stack_type name = {INIT(name)}
-#else
-#define CREATE_STACK(name) stack_type name = {}
-#endif
-
 void DemoAttacks(void);
 
 
