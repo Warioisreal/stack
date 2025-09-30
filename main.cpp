@@ -72,13 +72,16 @@ void DemoAttacks(void) {
 
 
     // Атака 1: Повреждение канареек
-    AttackCorruptStructCanaries(&victim);
+    // AttackCorruptStructCanaries(&victim);
 
     // Атака 2: Повреждение хешей
     // AttackCorruptHashes(&victim);
 
-    // Атака 3: Неконсистентность размера
-    //AttackCreateSizeInconsistency(&victim);
+    // Атака 3.1: Установка недопустимых значений ёмкости
+    AttackCreateSizeInconsistency1(&victim);
+
+    // Атака 3.2: Установка размера больше ёмкости
+    // AttackCreateSizeInconsistency2(&victim);
 
     // Атака 4: Повреждение канареек данных
     // AttackCorruptDataCanaries(&victim);

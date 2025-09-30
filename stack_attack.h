@@ -8,7 +8,8 @@
 
 void AttackCorruptStructCanaries(stack_type* stack);
 void AttackCorruptHashes(stack_type* stack);
-void AttackCreateSizeInconsistency(stack_type* stack);
+void AttackCreateSizeInconsistency1(stack_type* stack);
+void AttackCreateSizeInconsistency2(stack_type* stack);
 void AttackCorruptDataCanaries(stack_type* stack);
 void AttackCombinedDestruction(stack_type* stack);
 void AttackSilentDeath(stack_type* stack);

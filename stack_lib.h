@@ -15,6 +15,8 @@ const stack_elem_t CANARY_DEFAULT  = 0xbadcaca;
 
 const stack_elem_t POISON          = 0;
 
+const size_t MAX_STACK_CAPACITY    = 1000000;
+
 typedef struct StructInitData {
     const char* file_name = nullptr;
     int line_number       = 0;
@@ -27,13 +29,14 @@ typedef enum class Errors : char {
     STACK_POINTER_CORRUPT = 1,    // danger stack pointer
     STRUCT_CANARY_CORRUPT = 2,    // struct canary error
     SIZE_OVER_CAPACITY    = 3,    // size > capacity
-    ZERO_CAPACITY         = 4,    // capacity == 0
-    DATA_POINTER_CORRUPT  = 5,    // danger data pointer
-    HASH_MISMATCH         = 6,    // hash mismatch
-    DATA_CANARY_CORRUPT   = 7,    // data canary error
-    POP_EMPTY_STACK       = 8,    // pop from empty stack
-    CALLOC_FAILED         = 9,    // calloc failure
-    REALLOC_FAILED        = 10    // realloc failure
+    ZERO_CAPACITY         = 4,    // capacity = 0
+    CAPACITY_TOO_LARGE    = 5,    // capacity exceeds maximum limit
+    DATA_POINTER_CORRUPT  = 6,    // danger data pointer
+    HASH_MISMATCH         = 7,    // hash mismatch
+    DATA_CANARY_CORRUPT   = 8,    // data canary error
+    POP_EMPTY_STACK       = 9,    // pop from empty stack
+    CALLOC_FAILED         = 10,   // calloc failure
+    REALLOC_FAILED        = 11    // realloc failure
 } stack_error_t;
 
 typedef struct Stack {

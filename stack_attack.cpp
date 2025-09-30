@@ -31,11 +31,19 @@ void AttackCorruptHashes(stack_type* stack) {
 }
 
 // Создание неконсистентности размера
-void AttackCreateSizeInconsistency(stack_type* stack) {
+void AttackCreateSizeInconsistency1(stack_type* stack) {
+    printf("[ATTACK] Creating size inconsistency...\n");
+
+    // Устанавливаем недопустимые размеры
+    stack->size     = -1;
+    stack->capacity = -1;
+}
+
+void AttackCreateSizeInconsistency2(stack_type* stack) {
     printf("[ATTACK] Creating size inconsistency...\n");
 
     // Устанавливаем размер больше емкости
-    stack->size = stack->capacity + 100;
+    stack->size = stack->capacity + 1;
 }
 
 // Повреждение канареек данных

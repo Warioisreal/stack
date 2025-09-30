@@ -13,6 +13,13 @@ static stack_error_t StackShrinkCapacity(stack_type* stack);
 
 stack_error_t StackCtor(stack_type* stack, const size_t capacity) {
 
+    if (capacity > MAX_STACK_CAPACITY) {
+        GET_INFO(call_info);
+        stack->error = stack_error_t::CAPACITY_TOO_LARGE;
+        StackDump(stack, &call_info, "requested capacity exceeds maximum limit");
+        return stack_error_t::CAPACITY_TOO_LARGE;
+    }
+
     #ifdef DEBUG
     stack->left_canary  = STRUCT_CANARY_DEFAULT; // struct canary
     #endif
@@ -156,6 +163,13 @@ stack_error_t PrintStack(stack_type* stack) {
 
 static stack_error_t StackIncreaseCapacity(stack_type* stack) {
     STACK_VERIFY(stack, "error before realloc");
+
+    if (stack->capacity * 2 > MAX_STACK_CAPACITY) {
+        GET_INFO(call_info);
+        stack->error = stack_error_t::CAPACITY_TOO_LARGE;
+        StackDump(stack, &call_info, "stack capacity would exceed maximum limit during expansion");
+        return stack_error_t::CAPACITY_TOO_LARGE;
+    }
 
     stack->capacity *= 2;
 

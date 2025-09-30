@@ -17,7 +17,6 @@ static inline stack_elem_t GetRightDataCanary(stack_type* stack);
 #endif
 
 stack_error_t CheckStackIntegrity(stack_type* stack) {
-
     // check stack pointer
     if ((size_t)stack < 0x1000) { return stack_error_t::STACK_POINTER_CORRUPT; }
 
@@ -29,6 +28,7 @@ stack_error_t CheckStackIntegrity(stack_type* stack) {
 
     // check stack capacity
     if (stack->capacity == 0) { return stack_error_t::ZERO_CAPACITY; }
+    if (stack->capacity > MAX_STACK_CAPACITY) { return stack_error_t::CAPACITY_TOO_LARGE; }
 
     // check data pointer
     if ((size_t)stack->data < 0x1000) { return stack_error_t::DATA_POINTER_CORRUPT; }
@@ -204,6 +204,16 @@ static result DumpStackFields(stack_type* stack) {
         case stack_error_t::ZERO_CAPACITY:
             printf("  CAPACITY: ");
             PrintColor(RED, "ZERO\n");
+            return result::STOP;
+
+        case stack_error_t::CAPACITY_TOO_LARGE:
+            printf("  CAPACITY: ");
+            PrintColor(RED, "EXCEEDS MAXIMUM LIMIT\n");
+            printf("    capacity = ");
+            PrintColorVar(RED, "%zu\n", stack->capacity);
+            printf("    maximum allowed capacity = ");
+            PrintColorVar(GREEN, "%zu\n", MAX_STACK_CAPACITY);
+            printf("\n");
             return result::STOP;
 
         case stack_error_t::DATA_POINTER_CORRUPT:
