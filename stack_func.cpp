@@ -7,8 +7,7 @@
 #include "defender_system.h"
 #include "stack_func.h"
 
-static stack_error_t StackIncreaseCapacity(stack_type* stack);
-static stack_error_t StackShrinkCapacity(stack_type* stack);
+static stack_error_t StackEditCapacity(stack_type* stack, size_t capacity);
 static inline void StackFillPoison(stack_type* stack);
 
 stack_error_t StackCtor(stack_type* stack, const size_t capacity) {
@@ -79,7 +78,7 @@ stack_error_t StackPush(stack_type* stack, const stack_elem_t value) {
     STACK_VERIFY_AND_RETURN(stack, "error before push");
 
     if (stack->size + 1 == stack->capacity) {
-        StackIncreaseCapacity(stack);
+        StackEditCapacity(stack, stack->capacity * 2);
     }
     stack->data[stack->size++] = value;
 
@@ -109,7 +108,7 @@ stack_error_t StackPop(stack_type* stack, stack_elem_t* value) {
         #endif
 
         if (stack->size == stack->capacity / 4 && stack->size > 1) {
-            StackShrinkCapacity(stack);
+            StackEditCapacity(stack, stack->capacity / 2);
         }
     } else {
         #ifdef DEBUG
@@ -180,10 +179,10 @@ stack_error_t PrintStack(stack_type* stack) {
 
 //----------------------------------------------------------------------------------
 
-static stack_error_t StackIncreaseCapacity(stack_type* stack) {
+static stack_error_t StackEditCapacity(stack_type* stack, size_t capacity) {
     STACK_VERIFY_AND_RETURN(stack, "error before realloc");
 
-    if (stack->capacity * 2 > MAX_STACK_CAPACITY) {
+    if (capacity > MAX_STACK_CAPACITY) {
         #ifdef DEBUG
         GET_INFO(call_info);
         #endif
@@ -196,57 +195,12 @@ static stack_error_t StackIncreaseCapacity(stack_type* stack) {
         return stack_error_t::CAPACITY_TOO_LARGE;
     }
 
-    stack->capacity *= 2;
+    stack->capacity = capacity;
 
     #ifdef DEBUG
-    stack_elem_t* new_data = (stack_elem_t*)realloc(stack->data - 1, (stack->capacity + 2) * sizeof(stack_elem_t));
+    stack_elem_t* new_data = (stack_elem_t*)realloc(stack->data - 1, (capacity + 2) * sizeof(stack_elem_t));
     #else
-    stack_elem_t* new_data = (stack_elem_t*)realloc(stack->data, stack->capacity * sizeof(stack_elem_t));
-    #endif
-
-    if (new_data == nullptr) {
-        #ifdef DEBUG
-        GET_INFO(call_info);
-        #endif
-        stack->error = stack_error_t::REALLOC_FAILED;
-        #ifdef DEBUG
-        StackDump(stack, &call_info, "realloc failed");
-        #else
-        StackDump(stack, "realloc failed");
-        #endif
-        return stack_error_t::REALLOC_FAILED;
-    }
-
-    #ifdef DEBUG
-    stack->data = new_data + 1;
-    #else
-    stack->data = new_data;
-    #endif
-
-    StackFillPoison(stack);
-
-    #ifdef DEBUG
-    stack->data[stack->capacity] = CANARY_DEFAULT;
-    stack->data_hash             = CalculateDataHash(stack);
-    stack->struct_hash           = CalculateStructHash(stack);
-    #endif
-
-    STACK_VERIFY_AND_RETURN(stack, "error after realloc");
-
-    return stack_error_t::OK;
-}
-
-//----------------------------------------------------------------------------------
-
-static stack_error_t StackShrinkCapacity(stack_type* stack) {
-    STACK_VERIFY_AND_RETURN(stack, "error before realloc");
-
-    stack->capacity /= 2;
-
-    #ifdef DEBUG
-    stack_elem_t* new_data = (stack_elem_t*)realloc(stack->data - 1, (stack->capacity + 2) * sizeof(stack_elem_t));
-    #else
-    stack_elem_t* new_data = (stack_elem_t*)realloc(stack->data, stack->capacity * sizeof(stack_elem_t));
+    stack_elem_t* new_data = (stack_elem_t*)realloc(stack->data, capacity * sizeof(stack_elem_t));
     #endif
 
     if (new_data == nullptr) {
